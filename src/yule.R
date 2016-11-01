@@ -35,6 +35,18 @@ buildTree = function(n=10, DEBUG=FALSE) {
   return(tree)
 }
 
+getParent = function(tree, index){
+  tree[index]
+}
+
+getChild = function(tree, index){
+  which(tree == index)
+}
+
+isExtant = function(tree, index) {
+  length(getChild(tree, index)) == 0
+}
+
 giveMeAYule = function(n, lambda=0.5) {
   
   
