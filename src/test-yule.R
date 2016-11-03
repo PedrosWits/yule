@@ -1,5 +1,9 @@
 source("yule.R")
+library(ggplot2)
+library(reshape2)
+library(plyr)
 
+# # Representative Case 
 n = 6
 
 order =   c(5, 5,  3,  3,  4,  4, 0, 1, 2, 2,  1)
@@ -17,3 +21,18 @@ expected_l_chars = c("T-140", "T-140",  # Leaves 1 and 2 = NA or 0
                      "75-10",  # Edge 10 (was born at 10, speciated at 90)
                      "")       # Edge 11 (was born at 0, speciated at 75)
 
+# #
+
+n = 10
+lambda=0.5
+four_yays = lapply(1:4, function(i) evolutionOf(yay(n, lambda)))
+four_yays = rbind.fill(four_yays)
+four_yays$group = ((as.numeric(rownames(four_yays)) - 1) %/% n) + 1
+
+ggplot(four_yays, aes(x = tstep, y = nlineages))   +
+  geom_step(aes(colour=factor(group))) +
+  facet_wrap(~ group, ncol=2) + 
+  ylab("Number of Lineages") +
+  xlab("Time Steps") +
+  theme_bw() +
+  scale_colour_discrete(guide = FALSE)

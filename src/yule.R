@@ -1,48 +1,41 @@
 buildTree = function(n=10, lambda=0.5) {
-  nspecies = (2*n - 1)
-  #cols = c("parent", "child", "birth", "speciation", "length")
-  cols = c("parent" , "birth", "speciation", "length")
+  nspecies = (2*n - 2)
+  cols = c("parent", "child", "birth", "termination", "length")
   
   tree = matrix(NA, nrow = nspecies, ncol = length(cols))
   colnames(tree) = cols
-  tree[,1] = 0
-  cumt = 0
+  tree[,c("parent", "child")] = 0
   
+  t = 0
   for(k in 1:(n-1)) {
     if(k == 1) {
-      root = n + 1
-      tree[root, "parent"] = root
-      parent = root
-      t = 0
+      parent = 2*n - 1
     } else {
-      notZero = which(tree[,"parent"] != 0)
-      noChilds = notZero[!(notZero %in% tree[,"parent"])]
-      # Undesired Sampling behavior for length == 1
-      if(length(noChilds) > 1) {
-        parent = sample(noChilds, 1)  
-      } else {
-        parent = noChilds
-      }
-      t = rexp(1, rate = k*lambda) 
+      candidates = which( ! (tree[, "child"] %in% tree[, "parent"]))
+      # Length of candidates is always > 1 otherwise we would
+      #  have to be careful with the behavior of sample
+      #  (undesired behavior for length == 1)
+      parent = sample(candidates, 1)
+      t = t + rexp(1, rate = k*lambda) 
     }
-    cumt = cumt + t
     
     childs = sample(which(tree[,"parent"]==0), 2)
-    #tree[childs, "child"] = childs
+    tree[childs, "child"] = childs
     tree[childs, "parent"] = parent
-    tree[childs, "birth"] = cumt
-    tree[parent, "speciation"] = cumt
+    tree[childs, "birth"] = t
+    if(k > 1) {
+      tree[parent, "termination"] = t  
+    }
   }
-  tree[, "length"] = tree[, "speciation"] - tree[, "birth"]
+  t = t + rexp(1, rate = n*lambda)
+  tree[is.na(tree[, "termination"]), "termination"] = t
+  
+  tree[, "length"] = tree[, "termination"] - tree[, "birth"]
   return(tree)
 }
 
-isRoot = function(tree, index=1:nrow(tree)) {
-  tree[index, "parent"] == index
-}
-
 isExtant = function(tree, index=1:nrow(tree)) {
-  is.na(tree[, "speciation"])
+  ! (tree[index, "child"] %in% tree[, "parent"])
 }
 
 loadSpecies = function(path="../aux/species.txt") {
@@ -55,55 +48,26 @@ yay = function(n=10, lambda=0.5) {
   tree = buildTree(n)
   species = loadSpecies()
   if(length(species) > 0) {
-    nomes = species[sample(1:length(species), nrow(tree))]  
+    nomes = species[sample(1:length(species), nrow(tree)+1)]  
   } else {
-    nomes = paste("poney", 1:length(tree), sep="")
+    nomes = paste("poney", 1:(nrow(tree)+1), sep="")
   }
   
-  yule = data.frame(Name       = nomes,
-                    ParentName = nomes[tree[, "parent"]],
-                    Parent     = tree[, "parent"],
-                    #Child      = nomes[tree[, "child"]],
-                    #ChildName  = tree[, "child"],
-                    isRoot     = isRoot(tree),
-                    isExtant   = isExtant(tree, 1:nspecies),
-                    Birth      = tree[, "birth"],
-                    Length     = tree[, "length"],
-                    Speciation = tree[, "speciation"])
-  yule[yule$isRoot == TRUE, ]$ParentName = NA
+  yule = data.frame(Parent      = tree[, "parent"],
+                    ParentName  = nomes[tree[, "parent"]],
+                    Child       = tree[, "child"], 
+                    ChildName   = nomes[tree[, "child"]],
+                    isExtant    = isExtant(tree),
+                    Birth       = tree[, "birth"],
+                    Termination = tree[, "termination"],
+                    Length      = tree[, "length"])
+  yule[yule$Parent == 2*n-1, ]$ParentName = nomes[2*n-1]
   #class(yule) = "yay"
   return(yule)  
 }
 
-howManySpecies = function(yule, t) {
-  
+evolutionOf = function(yule) {
+  tstep = unique(sort(yule$Birth))
+  tstep = c(tstep, max(yule$Termination))
+  return(data.frame(tstep=tstep, nlineages=c(2:length(tstep), length(tstep))))
 }
-
-
-##
-
-# 
-# getLevel = function(tree, index) {
-#   level = 0
-#   parent = index
-#   while(!isRoot(tree, parent)) {
-#     parent = getParent(tree, parent)
-#     level = level + 1
-#   }
-#   return(level)
-# }
-# 
-# getLevels = function(tree) {
-#   sapply(tree, function(i) getLevel(tree,i))
-# }
-# 
-# 
-# getChild = function(tree, index){
-#   childs = which(tree[,"parent"] == index)
-#   childs = childs[!isRoot(tree, childs)]
-#   if(length(childs)==0) {
-#     return(NA)
-#   } else {
-#     return(childs)
-#   }
-# }
