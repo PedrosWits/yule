@@ -19,6 +19,119 @@
 %--------------------------------------------------------------------%
 \section*{Part 1}
 
+\subsection*{Question (i)}
+
+
+<<size="small">>=
+buildTree = function(n=10, lambda=0.5) {
+  nspecies = (2*n - 2)
+  cols = c("parent", "child", "birth", "termination", "length")
+  
+  tree = matrix(NA, nrow = nspecies, ncol = length(cols))
+  colnames(tree) = cols
+  tree[,c("parent", "child")] = 0
+  
+  t = 0
+  for(k in 1:(n-1)) {
+    if(k == 1) {
+      parent = 2*n - 1
+    } else {
+      candidates = which( ! (tree[, "child"] %in% tree[, "parent"]))
+      # Length of candidates is always > 1 otherwise we would
+      #  have to be careful with the behavior of sample
+      #  (undesired behavior for length == 1)
+      parent = sample(candidates, 1)
+      t = t + rexp(1, rate = k*lambda) 
+    }
+    
+    childs = sample(which(tree[,"parent"]==0), 2)
+    tree[childs, "child"] = childs
+    tree[childs, "parent"] = parent
+    tree[childs, "birth"] = t
+    if(k > 1) {
+      tree[parent, "termination"] = t  
+    }
+  }
+  t = t + rexp(1, rate = n*lambda)
+  tree[is.na(tree[, "termination"]), "termination"] = t
+  
+  tree[, "length"] = tree[, "termination"] - tree[, "birth"]
+  return(tree)
+}
+
+isExtant = function(tree, index=1:nrow(tree)) {
+  ! (tree[index, "child"] %in% tree[, "parent"])
+}
+
+loadSpecies = function(path="../aux/species.txt") {
+  species = read.table(path, header=FALSE, sep = "+", stringsAsFactors = FALSE)$V1
+  species[-which(species=="unavailable")]
+}
+
+# Yet Another Yule (YAY)
+yay = function(n=10, lambda=0.5) {
+  tree = buildTree(n)
+  species = loadSpecies()
+  if(length(species) > 0) {
+    nomes = species[sample(1:length(species), nrow(tree)+1)]  
+  } else {
+    nomes = paste("poney", 1:(nrow(tree)+1), sep="")
+  }
+  
+  yule = data.frame(Parent      = tree[, "parent"],
+                    ParentName  = nomes[tree[, "parent"]],
+                    Child       = tree[, "child"], 
+                    ChildName   = nomes[tree[, "child"]],
+                    isExtant    = isExtant(tree),
+                    Birth       = tree[, "birth"],
+                    Termination = tree[, "termination"],
+                    Length      = tree[, "length"])
+  yule[yule$Parent == 2*n-1, ]$ParentName = nomes[2*n-1]
+  return(yule)  
+}
+
+yule = yay()
+head(yule, 1)
+yule[, -c(2,4)]
+@
+
+
+\subsection*{Question (ii)}
+
+<<size="small">>=
+evolutionOf = function(yule) {
+  tstep = unique(sort(yule$Birth))
+  tstep = c(tstep, max(yule$Termination))
+  return(data.frame(tstep=tstep, nlineages=c(2:length(tstep), length(tstep))))
+}
+
+evolutionOf(yule)
+@
+
+
+\subsection*{Question (iii)}
+
+<<echo=FALSE, warning=F, message=F>>=
+library(ggplot2)
+library(plyr)
+@
+
+
+<<size="small">>=
+n = 10
+lambda=0.5
+four_yays = lapply(1:4, function(i) evolutionOf(yay(n, lambda)))
+four_yays = rbind.fill(four_yays)
+four_yays$group = ((as.numeric(rownames(four_yays)) - 1) %/% n) + 1
+
+ggplot(four_yays, aes(x = tstep, y = nlineages))   +
+  geom_step(aes(colour=factor(group))) +
+  facet_wrap(~ group, ncol=2) + 
+  ylab("Number of Lineages") +
+  xlab("Time Steps") +
+  theme_bw() +
+  scale_colour_discrete(guide = FALSE)
+@
 
 
 %--------------------------------------------------------------------%
