@@ -1,0 +1,100 @@
+\documentclass{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{fancyhdr}
+\usepackage{enumerate}
+\usepackage{float}
+
+\renewcommand{\topfraction}{0.9}
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{Alex Kell and Pedro Pinto da Silva}
+\lhead{Programming for Big Data Project}
+\rfoot{Page \thepage}
+
+\begin{document}
+\section*{Part 3: Investigating Properties of Trees}
+
+\subsection*{R Functions}
+
+The following function is used to calculate how many extant species are descendants of each of the two lineages which emerge from the root. 
+
+<<>>=
+degreeOfBalance = function(tree){
+  num_of_leaves = length(tree$tip.label)
+  # Returns the number of leaves within a particular tree
+  root_node = num_of_leaves+1
+  # Finds the number that the root node has been assigned to
+  c1 = tree$edge[which(tree$edge==root_node)[1],2]
+  c2 = tree$edge[which(tree$edge==root_node)[2],2]
+  # Finds the two descendents of the root node
+
+  if((c1<=num_of_leaves && c2<=num_of_leaves+1)  || 
+     ((c2<=num_of_leaves && c1<=num_of_leaves+1))){
+    # Check to see whether the descendents of the root are both leaf nodes 
+    # ie. Tree with total of 2 leaf nodes 
+    ret = c(1,1)
+    return(ret)
+  }else if(c1<=num_of_leaves || c2<=num_of_leaves){
+    # Check to see whether a descendent of root is a leaf node
+    desc1 = 1
+    desc2 = num_of_leaves-1
+    # For this condition to be true, 
+    # all of the leaf nodes must descend from other root descendent
+    ret = c(desc1, desc2)
+    return(ret)
+  }else{
+    sub_tree1 = extract.clade(tree, c1)
+    sub_tree2 = extract.clade(tree, c2)
+    # Creates two trees where the root is either descendent of the root
+    desc1 = length(sub_tree1$tip.label)
+    desc2 = length(sub_tree2$tip.label)
+    # Calculate number of leaves on each of the newly created trees
+    ret = c(desc1,desc2)
+    return(ret)
+  }
+}
+@
+\newpage
+The following function counts the number of branches there are between each extant species and the root
+
+<<>>=
+numOfBranches = function(tree){
+  num_of_leaves=length(tree$tip.label)
+  # Calculates the total number of leaves on the tree
+  root = num_of_leaves+1
+  # Finds the number that the root node has been assigned to
+  iterateBranch = function(tree, up){
+    # Function which takes the tree and node number to count
+    count = 0
+    while(up!=root){
+      # Continues to traverse towards the root via parent nodes until 
+      # the root node has been reached
+      up = tree$edge[which(tree$edge[,2]==up)]
+      # Returns the parent node of the node we are currently on
+      count = count + 1
+      # Iterates counter to calculate number of parents nodes we have traveresed through
+    }
+    return(count)
+  }
+  store = sapply(1:num_of_leaves, function(i) iterateBranch(tree, i))
+  # Calculates number of branches between each species and the root for each leaf
+  names(store) = tree$tip.label[1:num_of_leaves]
+  # Attributes vector names to the result of number of branches for each species 
+  return(store)
+}
+@
+
+The following code calculates the length of each pendant edge
+
+<<>>=
+lengthOfPendants = function(tree){
+  num_of_leaves=length(tree$tip.label)
+  # Calculates the number of leaves for the given tree
+  penLength = rep(NA, num_of_leaves)
+  penLength = tree$edge.length[1:num_of_leaves]
+  # Extracts the lengths of the pendant edges
+  return(penLength)
+}
+@
+
+\end{document}
