@@ -16,6 +16,8 @@
 
 \subsection*{R Functions}
 
+\textbf{(i)}
+
 The following function is used to calculate how many extant species are descendants of each of the two lineages which emerge from the root. 
 
 <<>>=
@@ -95,6 +97,23 @@ lengthOfPendants = function(tree){
   # Extracts the lengths of the pendant edges
   return(penLength)
 }
+@
+
+\textbf{(ii)}
+
+The following code calculates three properties for a simulated yule tree. This is done using the functions defined in \textbf{part (ii)}
+
+<<>>=
+library("ape")
+tree = rtree(16)
+plot(tree)
+nodelabels(frame="none")
+balance = degreeOfBalance(tree)
+sample(balance, 1)
+extants = numOfBranches(tree)
+sample(extants, 1)
+penEdge = lengthOfPendants(tree)
+sample(penEdge, 1)
 @
 
 \end{document}
