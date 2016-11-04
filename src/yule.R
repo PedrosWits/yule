@@ -39,7 +39,8 @@ isExtant = function(tree, index=1:nrow(tree)) {
 }
 
 loadSpecies = function(path="../aux/species.txt") {
-  species = read.table(path, header=FALSE, sep = "+", stringsAsFactors = FALSE)$V1
+  species = tryCatch(read.table(path, header=FALSE, sep = "+", stringsAsFactors = FALSE)$V1,
+                     return(NULL))
   species[-which(species=="unavailable")]
 }
 
@@ -62,7 +63,12 @@ yay = function(n=10, lambda=0.5) {
                     Termination = tree[, "termination"],
                     Length      = tree[, "length"])
   yule[yule$Parent == 2*n-1, ]$ParentName = nomes[2*n-1]
-  #class(yule) = "yay"
+  # Relabelling
+  yule[yule$isExtant==TRUE, ]$Child = 1:n
+  yule[yule$isExtant==FALSE, ]$Child = (n+2):(2*n-1)
+  yule$Parent = yule$Child[yule$Parent]
+  yule[is.na(yule$Parent), ]$Parent = n + 1
+  
   return(yule)  
 }
 
