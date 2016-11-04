@@ -142,6 +142,11 @@ ggplot(four_yays, aes(x = tstep, y = nlineages))   +
 %--------------------------------------------------------------------%
 \section*{Part 2}
 
+At this stage, we introduced a new function to relabel the edges as required and return a phylo object instead.
+<<size="small">>=
+
+
+@
 
 
 %--------------------------------------------------------------------%

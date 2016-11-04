@@ -63,13 +63,24 @@ yay = function(n=10, lambda=0.5) {
                     Termination = tree[, "termination"],
                     Length      = tree[, "length"])
   yule[yule$Parent == 2*n-1, ]$ParentName = nomes[2*n-1]
+  return(yule)  
+}
+
+yaPhylo = function(n=10, lambda=0.5) {
+  yule = yay(n, lambda)
+  
   # Relabelling
   yule[yule$isExtant==TRUE, ]$Child = 1:n
   yule[yule$isExtant==FALSE, ]$Child = (n+2):(2*n-1)
   yule$Parent = yule$Child[yule$Parent]
   yule[is.na(yule$Parent), ]$Parent = n + 1
   
-  return(yule)  
+  phylo = list(edge = matrix(c(yule$Parent, yule$Child), ncol = 2),
+               edge.length = yule$Length,
+               tip.label =yule$ChildName,
+               Nnode = n - 1)
+  class(phylo) = "phylo"
+  return(phylo)
 }
 
 evolutionOf = function(yule) {
