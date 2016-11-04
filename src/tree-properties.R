@@ -5,7 +5,7 @@ degreeOfBalance = function(tree){
   root_node = num_of_leaves+1
   c1 = tree$edge[which(tree$edge==root_node)[1],2]
   c2 = tree$edge[which(tree$edge==root_node)[2],2]
-
+ 
   if((c1<=num_of_leaves && c2<=num_of_leaves+1) || ((c2<=num_of_leaves && c1<=num_of_leaves+1))){
     ret = c(1,1)
     return(ret)
