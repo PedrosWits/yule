@@ -51,7 +51,7 @@ yay = function(n=10, lambda=0.5) {
   if(length(species) > 0) {
     nomes = species[sample(1:length(species), nrow(tree)+1)]  
   } else {
-    nomes = paste("poney", 1:(nrow(tree)+1), sep="")
+    nomes = paste("pony", 1:(nrow(tree)+1), sep="")
   }
   
   yule = data.frame(Parent      = tree[, "parent"],
@@ -77,7 +77,7 @@ yaPhylo = function(n=10, lambda=0.5) {
   
   phylo = list(edge = matrix(c(yule$Parent, yule$Child), ncol = 2),
                edge.length = yule$Length,
-               tip.label =yule$ChildName,
+               tip.label = as.character(yule[yule$isExtant==TRUE,]$ChildName),
                Nnode = n - 1)
   class(phylo) = "phylo"
   return(phylo)
