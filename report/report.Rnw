@@ -101,7 +101,7 @@ lengthOfPendants = function(tree){
 
 \textbf{(ii)}
 
-The following code calculates three properties for a simulated yule tree. This is done using the functions defined in \textbf{part (ii)}
+The following code calculates three properties for a simulated yule tree. This is done using the functions defined in \textbf{part (i)}
 
 <<>>=
 library("ape")
