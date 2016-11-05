@@ -22,6 +22,7 @@
 \subsection*{Question (i)}
 
 
+
 <<size="small">>=
 buildTree = function(n=10, lambda=0.5) {
   nspecies = (2*n - 2)
@@ -36,6 +37,9 @@ buildTree = function(n=10, lambda=0.5) {
     if(k == 1) {
       parent = 2*n - 1
     } else {
+      # A candidate edge is an edge of which the child is an extant
+      # species. In this case we look for children which do not
+      # have an entry in the vector of parents.
       candidates = which( ! (tree[, "child"] %in% tree[, "parent"]))
       # Length of candidates is always > 1 otherwise we would
       #  have to be careful with the behavior of sample
@@ -99,13 +103,13 @@ yule[, -c(2,4)]
 \subsection*{Question (ii)}
 
 <<size="small">>=
-evolutionOf = function(yule) {
+yuleSteps = function(yule) {
   tstep = unique(sort(yule$Birth))
   tstep = c(tstep, max(yule$Termination))
   return(data.frame(tstep=tstep, nlineages=c(2:length(tstep), length(tstep))))
 }
 
-evolutionOf(yule)
+yuleSteps(yule)
 @
 
 
@@ -114,13 +118,14 @@ evolutionOf(yule)
 <<echo=FALSE, warning=F, message=F>>=
 library(ggplot2)
 library(plyr)
+library(ape)
 @
 
 
 <<size="small">>=
 n = 10
 lambda=0.5
-four_yays = lapply(1:4, function(i) evolutionOf(yay(n, lambda)))
+four_yays = lapply(1:4, function(i) yuleSteps(yay(n, lambda)))
 four_yays = rbind.fill(four_yays)
 four_yays$group = ((as.numeric(rownames(four_yays)) - 1) %/% n) + 1
 
@@ -142,12 +147,54 @@ ggplot(four_yays, aes(x = tstep, y = nlineages))   +
 %--------------------------------------------------------------------%
 \section*{Part 2}
 
+\subsection*{Question (i)}
+
 At this stage, we introduced a new function to relabel the edges as required and return a phylo object instead.
 <<size="small">>=
-
-
+# Yet Another Phylo
+yaPhylo = function(n=10, lambda=0.5) {
+  yule = yay(n, lambda)
+  
+  # Relabelling the nodes
+  yule[yule$isExtant==TRUE, ]$Child = 1:n
+  yule[yule$isExtant==FALSE, ]$Child = (n+2):(2*n-1)
+  yule$Parent = yule$Child[yule$Parent]
+  yule[is.na(yule$Parent), ]$Parent = n + 1
+  
+  phylo = list(edge = matrix(c(yule$Parent, yule$Child), ncol = 2),
+               edge.length = yule$Length,
+               tip.label = paste("t", 1:10, sep=""),
+               Nnode = n - 1)
+  class(phylo) = "phylo"
+  return(phylo)
+}
 @
 
+\subsection*{Question (ii)}
+
+<<size="small">>=
+length.phylo = function(phylo) {
+  sum(phylo$edge.length)
+}
+@
+
+\subsection*{Question (iii)}
+
+
+
+<<size="small">>=
+n = 10
+lambda =  0.5
+par(mfrow=c(2,2))
+
+for (i in 1:4) {
+  phylo = yaPhylo(n, lambda)
+  plot(phylo)
+  title(main=paste("Tree", i),
+        sub=paste("Phylogenetic Diversity:", round(length(phylo),2)),
+        line = 1)
+}
+@
 
 %--------------------------------------------------------------------%
 %--------------------------------------------------------------------%

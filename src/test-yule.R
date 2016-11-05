@@ -21,7 +21,7 @@ expected_l_chars = c("T-140", "T-140",  # Leaves 1 and 2 = NA or 0
                      "75-10",  # Edge 10 (was born at 10, speciated at 90)
                      "")       # Edge 11 (was born at 0, speciated at 75)
 
-# #
+## Part 1 - Question iii
 
 n = 10
 lambda=0.5
@@ -36,3 +36,16 @@ ggplot(four_yays, aes(x = tstep, y = nlineages))   +
   xlab("Time Steps") +
   theme_bw() +
   scale_colour_discrete(guide = FALSE)
+
+## Part 2 - Question iii
+n = 10
+lambda =  0.5
+par(mfrow=c(2,2))
+
+for (i in 1:4) {
+  phylo = yaPhylo(n, lambda)
+  plot(phylo)
+  title(main=paste("Tree", i),
+        sub=paste("Phylogenetic Diversity:", round(length(phylo),2)),
+        line = 1)
+}

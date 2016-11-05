@@ -66,10 +66,19 @@ yay = function(n=10, lambda=0.5) {
   return(yule)  
 }
 
+yuleSteps = function(yule) {
+  tstep = unique(sort(yule$Birth))
+  tstep = c(tstep, max(yule$Termination))
+  return(data.frame(tstep=tstep, nlineages=c(2:length(tstep), length(tstep))))
+}
+
+library(ape)
+
+# Yet Another Phylo
 yaPhylo = function(n=10, lambda=0.5) {
   yule = yay(n, lambda)
   
-  # Relabelling
+  # Relabelling the nodes
   yule[yule$isExtant==TRUE, ]$Child = 1:n
   yule[yule$isExtant==FALSE, ]$Child = (n+2):(2*n-1)
   yule$Parent = yule$Child[yule$Parent]
@@ -77,14 +86,12 @@ yaPhylo = function(n=10, lambda=0.5) {
   
   phylo = list(edge = matrix(c(yule$Parent, yule$Child), ncol = 2),
                edge.length = yule$Length,
-               tip.label = as.character(yule[yule$isExtant==TRUE,]$ChildName),
+               tip.label = paste("t", 1:10, sep=""),
                Nnode = n - 1)
   class(phylo) = "phylo"
   return(phylo)
 }
 
-evolutionOf = function(yule) {
-  tstep = unique(sort(yule$Birth))
-  tstep = c(tstep, max(yule$Termination))
-  return(data.frame(tstep=tstep, nlineages=c(2:length(tstep), length(tstep))))
+length.phylo = function(phylo) {
+  sum(phylo$edge.length)
 }
