@@ -86,7 +86,7 @@ yaPhylo = function(n=10, lambda=0.5) {
   
   phylo = list(edge = matrix(c(yule$Parent, yule$Child), ncol = 2),
                edge.length = yule$Length,
-               tip.label = paste("t", 1:10, sep=""),
+               tip.label = paste("t", 1:n, sep=""),
                Nnode = n - 1)
   class(phylo) = "phylo"
   return(phylo)

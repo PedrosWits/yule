@@ -205,7 +205,7 @@ yaPhylo = function(n=10, lambda=0.5) {
   
   phylo = list(edge = matrix(c(yule$Parent, yule$Child), ncol = 2),
                edge.length = yule$Length,
-               tip.label = paste("t", 1:10, sep=""),
+               tip.label = paste("t", 1:n, sep=""),
                Nnode = n - 1)
   class(phylo) = "phylo"
   return(phylo)
@@ -336,8 +336,7 @@ lengthOfPendants = function(tree){
 The following code calculates three properties for a simulated yule tree. This is done using the functions defined in \textbf{part (ii)}
 
 <<>>=
-#library("ape")
-tree = rtree(16)
+tree = yaPhylo(n = 16, lambda = 2.5)
 plot(tree)
 nodelabels(frame="none")
 balance = degreeOfBalance(tree)
