@@ -1,4 +1,5 @@
 \documentclass{article}
+
 \usepackage[margin=1in]{geometry}
 \usepackage{fancyhdr}
 \usepackage{enumerate}
@@ -11,7 +12,238 @@
 \lhead{Programming for Big Data Project}
 \rfoot{Page \thepage}
 
+% \textwidth=6.0in
+% \textheight=8.5in
+% \oddsidemargin=.1in
+% \evensidemargin=.1in
+% \headheight=-.3in
+% \setlength\parindent{0pt}
+
 \begin{document}
+
+\title{Modelling Evolutionary Trees \\ CSC8622}
+\author{Pedro Pinto da Silva \and Alexander Kell}
+
+\maketitle
+
+%--------------------------------------------------------------------%
+%--------------------------------------------------------------------%
+%--------------------------------------------------------------------%
+\section*{Part 1}
+
+\subsection*{Question (i)}
+
+Below we present our functions for generating a Yule tree. The algorithm for building the structure of the tree is straightforward:
+\begin{enumerate}
+  \item Initialize a vector of size $2n -2$ with zeros.
+  \item For each value $j$ in $1$ to $n - 1$:
+  \begin{enumerate} 
+        \item Find the non-zero elements of the vector whose index (represent extant species).\\ Special case for $j=1$.
+        \item Sample one value from the set of candidates (parent).\\ Special case for $j=1$ where parent is the root with value $2 \times n - 1$.
+        \item Sample up to two positions in the vector with value zero (childs).
+        \item Set the value of childs in the vector as the index of the parent.
+     \end{enumerate}
+\end{enumerate}
+In the end of the for loop we have a single numeric vector $v$ containing the structure of tree. Species or edge childs are given by the indexes of $v$ whereas the parent of a species stored at $i$ is obtained by simply accessing $v[i]$. Children of species $i$ are obtained by searching the vector for the element whose value is equal to $i$. If $v$ does not contain such value then $i$ is an extant species. The root is represented by value $2 \times n - 1$.
+Although this was a neat and resource-wise cheap way to store and represent the tree, we are also required to store the length of each edge. Therefore we augmented this basic representation of the tree to a matrix that also includes the birth, termination and length of each species. Even though that for a given edge the value of the child is given by the index of the row, we added a column "Child" to the generated matrix in order to increase readibility (as we are not worried about the space tradeoff).
+
+\bigskip
+However, we did not label the nodes according to the example given, i.e. the parent node labelled as $n + 1$, the inner nodes between $n + 2$ and $2 x n - 1$ and the leaf nodes between $1$ and $n$. To that extent, we perform on \ref{sec:pt2} a simple reordering of the labels which does not affect the structure of the tree.
+Finally we wrapped our method in a function that returns a data frame with further information, namely whether the species (or child) is extant or not.
+
+<<size="small">>=
+buildTree = function(n=10, lambda=0.5) {
+  nspecies = (2*n - 2)
+  cols = c("parent", "child", "birth", "termination", "length")
+  
+  tree = matrix(NA, nrow = nspecies, ncol = length(cols))
+  colnames(tree) = cols
+  tree[,c("parent", "child")] = 0
+  
+  t = 0
+  for(k in 1:(n-1)) {
+    if(k == 1) {
+      parent = 2*n - 1
+    } else {
+      # A candidate edge is an edge of which the child is an extant
+      # species. In this case we look for children which do not
+      # have an entry in the vector of parents.
+      candidates = which( ! (tree[, "child"] %in% tree[, "parent"]))
+      # Length of candidates is always > 1 otherwise we would
+      #  have to be careful with the behavior of sample
+      #  (undesired behavior for length == 1)
+      parent = sample(candidates, 1)
+      t = t + rexp(1, rate = k*lambda) 
+    }
+    
+    childs = sample(which(tree[,"parent"]==0), 2)
+    tree[childs, "child"] = childs
+    tree[childs, "parent"] = parent
+    tree[childs, "birth"] = t
+    if(k > 1) {
+      tree[parent, "termination"] = t  
+    }
+  }
+  t = t + rexp(1, rate = n*lambda)
+  tree[is.na(tree[, "termination"]), "termination"] = t
+  
+  tree[, "length"] = tree[, "termination"] - tree[, "birth"]
+  return(tree)
+}
+
+isExtant = function(tree, index=1:nrow(tree)) {
+  ! (tree[index, "child"] %in% tree[, "parent"])
+}
+
+loadSpecies = function(path="../aux/species.txt") {
+  species = read.table(path, header=FALSE, sep = "+", stringsAsFactors = FALSE)$V1
+  species[-which(species=="unavailable")]
+}
+
+# Yet Another Yule (YAY)
+yay = function(n=10, lambda=0.5) {
+  tree = buildTree(n, lambda)
+  species = loadSpecies()
+  if(length(species) > 0) {
+    nomes = species[sample(1:length(species), nrow(tree)+1)]  
+  } else {
+    nomes = paste("poney", 1:(nrow(tree)+1), sep="")
+  }
+  
+  yule = data.frame(Parent      = tree[, "parent"],
+                    ParentName  = nomes[tree[, "parent"]],
+                    Child       = tree[, "child"], 
+                    ChildName   = nomes[tree[, "child"]],
+                    isExtant    = isExtant(tree),
+                    Birth       = tree[, "birth"],
+                    Termination = tree[, "termination"],
+                    Length      = tree[, "length"])
+  yule[yule$Parent == 2*n-1, ]$ParentName = nomes[2*n-1]
+  return(yule)  
+}
+
+yule = yay()
+head(yule, 1)
+yule[, -c(2,4)]
+@
+
+
+\subsection*{Question (ii)}
+
+Below is the function for computing the time-step changes in the number of extant lineages:
+
+<<size="small">>=
+yuleSteps = function(yule) {
+  tstep = unique(sort(yule$Birth))
+  tstep = c(tstep, max(yule$Termination))
+  return(data.frame(tstep=tstep, nlineages=c(2:length(tstep), length(tstep))))
+}
+
+yuleSteps(yule)
+@
+
+
+\subsection*{Question (iii)}
+
+Using the function previously defined we created a time series step-plot for
+four different yule trees. It's worth noting that we coded this task so that
+more plots could be generated using the same code (only required to change the
+value of the variable \textit{nPlots}).
+
+<<echo=FALSE, warning=F, message=F>>=
+library(ggplot2)
+library(plyr)
+library(ape)
+@
+
+
+<<size="small">>=
+n = 10
+lambda=0.5
+nPlots = 4
+
+yays = lapply(1:nPlots, function(i) yuleSteps(yay(n, lambda)))
+yays = rbind.fill(yays)
+yays$group = ((as.numeric(rownames(yays)) - 1) %/% n) + 1
+
+ggplot(yays, aes(x = tstep, y = nlineages))   +
+  geom_step(aes(colour=factor(group))) +
+  facet_wrap(~ group, ncol=nPlots %/% 2) + 
+  ylab("Number of Lineages") +
+  xlab("Time Steps") +
+  theme_bw() +
+  scale_colour_discrete(guide = FALSE)
+@
+
+
+%--------------------------------------------------------------------%
+%--------------------------------------------------------------------%
+%--------------------------------------------------------------------%
+%--------------------------------------------------------------------%
+%--------------------------------------------------------------------%
+%--------------------------------------------------------------------%
+\section*{Part 2}\label{sec:pt2}
+
+\subsection*{Question (i)}
+
+At this stage, we introduced a new function to relabel the edges as required and return a phylo object instead.
+The relabelling, aparently tricky at first, consisted in a simple re-order of parent and child labels based on whether the edge represented an extant or extinct species.
+
+\bigskip
+We created a new function instead of changing our previously defined $yay$ function, because each returns a different representation of the yule tree, even though the underlying structure is the same. Consider that we might be interested later in creating our own class for representing phylogentic trees, called $yay$. Then, separating concerns now across different functions without altering behavior would prove beneficial later.
+
+<<size="small">>=
+# Yet Another Phylo
+yaPhylo = function(n=10, lambda=0.5) {
+  yule = yay(n, lambda)
+  
+  # Relabelling the nodes
+  yule[yule$isExtant==TRUE, ]$Child = 1:n
+  yule[yule$isExtant==FALSE, ]$Child = (n+2):(2*n-1)
+  yule$Parent = yule$Child[yule$Parent]
+  yule[is.na(yule$Parent), ]$Parent = n + 1
+  
+  phylo = list(edge = matrix(c(yule$Parent, yule$Child), ncol = 2),
+               edge.length = yule$Length,
+               tip.label = paste("t", 1:10, sep=""),
+               Nnode = n - 1)
+  class(phylo) = "phylo"
+  return(phylo)
+}
+@
+
+\subsection*{Question (ii)}
+
+The $length$ function for the phylo class consists in summing the lengths of all phylo edges:
+<<size="small">>=
+length.phylo = function(phylo) {
+  sum(phylo$edge.length)
+}
+@
+
+\subsection*{Question (iii)}
+
+Using the plot method for the phylo class we created following four tree plots:
+<<size="small">>=
+n = 10
+lambda =  0.5
+par(mfrow=c(2,2))
+
+for (i in 1:4) {
+  phylo = yaPhylo(n, lambda)
+  plot(phylo)
+  title(main=paste("Tree", i),
+        sub=paste("Phylogenetic Diversity:", round(length(phylo),2)),
+        line = 1)
+}
+@
+
+%--------------------------------------------------------------------%
+%--------------------------------------------------------------------%
+%--------------------------------------------------------------------%
+%--------------------------------------------------------------------%
+%--------------------------------------------------------------------%
+%--------------------------------------------------------------------%
 \section*{Part 3: Investigating Properties of Trees}
 
 \subsection*{R Functions}
@@ -104,7 +336,7 @@ lengthOfPendants = function(tree){
 The following code calculates three properties for a simulated yule tree. This is done using the functions defined in \textbf{part (ii)}
 
 <<>>=
-library("ape")
+#library("ape")
 tree = rtree(16)
 plot(tree)
 nodelabels(frame="none")
@@ -115,5 +347,11 @@ sample(extants, 1)
 penEdge = lengthOfPendants(tree)
 sample(penEdge, 1)
 @
+
+
+
+%--------------------------------------------------------------------%
+%--------------------------------------------------------------------%
+%--------------------------------------------------------------------%
 
 \end{document}
