@@ -65,4 +65,3 @@ df[1,] = data.frame(test=non$test[1],elapsed=non$elapsed[1],relative=non$relativ
 m$test[4]
 
 
-

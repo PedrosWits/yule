@@ -8,21 +8,14 @@
 \renewcommand{\topfraction}{0.9}
 \pagestyle{fancy}
 \fancyhf{}
-\rhead{Alex Kell and Pedro Pinto da Silva}
+\rhead{Alex Kell \and Pedro Pinto da Silva}
 \lhead{Programming for Big Data Project}
 \rfoot{Page \thepage}
-
-% \textwidth=6.0in
-% \textheight=8.5in
-% \oddsidemargin=.1in
-% \evensidemargin=.1in
-% \headheight=-.3in
-% \setlength\parindent{0pt}
 
 \begin{document}
 
 \title{Modelling Evolutionary Trees \\ CSC8622}
-\author{Pedro Pinto da Silva \and Alexander Kell}
+\author{Alex Kell \and Pedro Pinto da Silva}
 
 \maketitle
 
@@ -333,7 +326,7 @@ lengthOfPendants = function(tree){
 
 \textbf{(ii)}
 
-The following code calculates three properties for a simulated yule tree. This is done using the functions defined in \textbf{part (ii)}
+The following code calculates three properties for a simulated yule tree. This is done using the functions defined in \textbf{part (i)}
 
 <<>>=
 tree = yaPhylo(n = 16, lambda = 2.5)
