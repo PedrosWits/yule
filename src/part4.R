@@ -1,6 +1,6 @@
 jukes_cantor = function(tree, alpha, columns){
 
-  branching_Rec = function(x_v, t){  
+  branching_Rec = function(x_v, alpha, t){  
     p = (1/4)*(1-exp(-4*alpha*t))
     p1 = (1/4)*(1+3*exp(-4*alpha*t))
     child = rep(NA, length(x_v))
@@ -37,7 +37,7 @@ jukes_cantor = function(tree, alpha, columns){
 
   
   for(i in 1:length(tree$edge.length)){
-    x_w1 = branching_Rec(Matrix[i,-c(1,2)], t[i])
+    x_w1 = branching_Rec(Matrix[i,-c(1,2)], t[i], alpha=alpha)
     Matrix[i+1,-c(1,2)] = x_w1
   }
   
