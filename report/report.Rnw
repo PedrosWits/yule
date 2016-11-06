@@ -5,6 +5,8 @@
 \usepackage{enumerate}
 \usepackage{float}
 
+\setlength\parindent{0pt}
+
 \renewcommand{\topfraction}{0.9}
 \pagestyle{fancy}
 \fancyhf{}
@@ -22,7 +24,7 @@
 %--------------------------------------------------------------------%
 %--------------------------------------------------------------------%
 %--------------------------------------------------------------------%
-\section*{Part 1}
+\section{Simulating a Yule Process}
 
 \subsection*{Question (i)}
 
@@ -147,6 +149,8 @@ value of the variable \textit{nPlots}).
 library(ggplot2)
 library(plyr)
 library(ape)
+library(gridExtra)
+library("parallel")
 @
 
 
@@ -175,7 +179,7 @@ ggplot(yays, aes(x = tstep, y = nlineages))   +
 %--------------------------------------------------------------------%
 %--------------------------------------------------------------------%
 %--------------------------------------------------------------------%
-\section*{Part 2}\label{sec:pt2}
+\section{Represeting Trees as phylo Objects}\label{sec:pt2}
 
 \subsection*{Question (i)}
 
@@ -237,15 +241,13 @@ for (i in 1:4) {
 %--------------------------------------------------------------------%
 %--------------------------------------------------------------------%
 %--------------------------------------------------------------------%
-\section*{Part 3: Investigating Properties of Trees}
+\section{Investigating Properties of Trees}
 
-\subsection*{R Functions}
-
-\textbf{(i)}
+\subsection*{Question (i)}
 
 The following function is used to calculate how many extant species are descendants of each of the two lineages which emerge from the root. 
 
-<<>>=
+<<size="small">>=
 degreeOfBalance = function(tree){
   num_of_leaves = length(tree$tip.label)
   # Returns the number of leaves within a particular tree
@@ -281,10 +283,10 @@ degreeOfBalance = function(tree){
   }
 }
 @
-\newpage
+
 The following function counts the number of branches there are between each extant species and the root
 
-<<>>=
+<<size="small">>=
 numOfBranches = function(tree){
   num_of_leaves=length(tree$tip.label)
   # Calculates the total number of leaves on the tree
@@ -313,7 +315,7 @@ numOfBranches = function(tree){
 
 The following code calculates the length of each pendant edge
 
-<<>>=
+<<size="small">>=
 lengthOfPendants = function(tree){
   num_of_leaves=length(tree$tip.label)
   # Calculates the number of leaves for the given tree
@@ -324,22 +326,83 @@ lengthOfPendants = function(tree){
 }
 @
 
-\textbf{(ii)}
+\subsection*{Question (ii)}
 
-The following code calculates three properties for a simulated yule tree. This is done using the functions defined in \textbf{part (i)}
+The following code calculates three properties for a simulated yule tree. This is done using the functions defined in \textbf{part (ii)}
 
-<<>>=
+<<size="small">>=
 tree = yaPhylo(n = 16, lambda = 2.5)
-plot(tree)
-nodelabels(frame="none")
+# Generates a tree using the user defined function
 balance = degreeOfBalance(tree)
+# Calculates the number of extants species that are descendents of the two 
+# lineages emerging from the root
 sample(balance, 1)
+# Samples the number of extant species from one of the descendents from the root
 extants = numOfBranches(tree)
+# Calculates number of branches between extant species and root
 sample(extants, 1)
+# Samples number of branches between itself and root for one of the extant species
 penEdge = lengthOfPendants(tree)
+# Calculates the length of the pendant for each extant species
 sample(penEdge, 1)
+# Samples one of the extant species and returns its length
 @
 
+The following function generates a tree, and calculates different properties on each of the trees. Including diversity, number of branches from extant species to root, length of pendant, and length of tree. 
+
+<<size="small">>=
+calc_properties = function(dummy){
+  tree = yaPhylo(n = 16, lambda = 2.5)
+  # Generates a tree with 16 extant species and a lambda of 2.5
+  d1 = sample(degreeOfBalance(tree),1) 
+  d2 = sample(numOfBranches(tree),1) 
+  d3 = sample(lengthOfPendants(tree),1)
+  d4 = sample(length(tree),1) 
+  # Sample each of the properties, as described above
+  ret = c(d1,d2,d3,d4)
+  # Returns the samples for each tree
+  return(ret)
+}
+@
+
+
+
+<<size="small">>=
+cl = makeCluster(4) # Makes a cluster on all cores of the computer
+clusterExport(cl, c("isExtant","loadSpecies","buildTree","yay","yaPhylo",
+                    "calc_properties","degreeOfBalance","numOfBranches",
+                    "lengthOfPendants","length.phylo","extract.clade"))
+# Exports all of the objects which will be required when making the calculations
+  n = parSapply(cl, 1:1000, calc_properties) 
+  # Uses parSapply to run the function 1000 times, returning all values to n
+stopCluster(cl) # Stops the cluster after use
+@
+
+The following code uses ggplot to plot the properties in histograms.  
+
+<<size="small">>=
+n=as.data.frame(t(n))
+# Converts n to a dataframe to be used by ggplot
+p1 = ggplot(n, aes(n[,1])) + geom_histogram(bins = 30) + ggtitle("Diversity") + 
+  labs(x="Value", y="Count")
+# Use of ggplot to plot histograms, with 30 bins
+p2 = ggplot(n, aes(n[,2])) + geom_histogram(bins = 20) + ggtitle("Number of Branches")+
+  labs(x="Value", y="Count")
+p3 = ggplot(n, aes(n[,3])) + geom_histogram(bins = 30) + ggtitle("Length of Pendant") +
+  labs(x="Value", y="Count")
+p4 = ggplot(n, aes(n[,4])) + geom_histogram(bins = 30) + ggtitle("Length") + 
+  labs(x="Value", y="Count")
+grid.arrange(p1,p2,p3,p4) # Use of gridExtra package to arrange plots in 2 columns and 2 rows
+@
+
+The plots show varying distributions for each of the tree properties. The diversity of the tree seems to be uniform. With values falling between 1 and 15. 
+
+\bigskip
+The number of branches between an extant and the root seems to follow a normal distribution, with the mode being 4 branches. There seem to be very little counts where there is just 1 branch between the extant and root, and also where there are over 8 branches. This distribution can be explained by the number of extant species set at the generation of the tree. The algorithm stops at 16 species, and therefore does not leave time for successive branches to be made.
+
+\bigskip
+The length of the pedant seems to follow an exponential distribution. This is due to the fact that these timings are generated from an exponential distribution when the tree is generated. This is the same for the length of the tree.
+
 %--------------------------------------------------------------------%
 %--------------------------------------------------------------------%
 %--------------------------------------------------------------------%
@@ -347,7 +410,7 @@ sample(penEdge, 1)
 %--------------------------------------------------------------------%
 %--------------------------------------------------------------------%
 
-\section*{Part 4}
+\section{Simulating a DNA Alignment}
 
 \subsection*{Question (i)}
 Below we present our functions for simulating an alignment under the Jukes Cantor model.
@@ -496,5 +559,4 @@ apart. Curiously, the species $Craciformes$ is present in all pairs that maximiz
 %--------------------------------------------------------------------%
 %--------------------------------------------------------------------%
 %--------------------------------------------------------------------%
-
 \end{document}
