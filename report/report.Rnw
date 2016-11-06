@@ -390,18 +390,24 @@ p2 = ggplot(n, aes(n[,2])) + geom_histogram(bins = 20) + ggtitle("Number of Bran
   labs(x="Value", y="Count")
 p3 = ggplot(n, aes(n[,3])) + geom_histogram(bins = 30) + ggtitle("Length of Pendant") +
   labs(x="Value", y="Count")
-p4 = ggplot(n, aes(n[,4])) + geom_histogram(bins = 30) + ggtitle("Length") + 
+p4 = ggplot(n, aes(n[,4])) + geom_histogram(bins = 10) + ggtitle("Length") + 
   labs(x="Value", y="Count")
 grid.arrange(p1,p2,p3,p4) # Use of gridExtra package to arrange plots in 2 columns and 2 rows
 @
 
-The plots show varying distributions for each of the tree properties. The diversity of the tree seems to be uniform. With values falling between 1 and 15. 
+The plots show varying distributions for each of the tree properties. 
+
+\bigskip
+The diversity of the tree seems to be roughly uniform. Whilst there seems to be variation between each value, there does not seem to be a statistically significant value, this remains true with repeated sampling. This is due to the random nature at which nodes give rise to children. With any node having an equally likely change to undergo a branch splitting.
 
 \bigskip
 The number of branches between an extant and the root seems to follow a normal distribution, with the mode being 4 branches. There seem to be very little counts where there is just 1 branch between the extant and root, and also where there are over 8 branches. This distribution can be explained by the number of extant species set at the generation of the tree. The algorithm stops at 16 species, and therefore does not leave time for successive branches to be made.
 
 \bigskip
-The length of the pedant seems to follow an exponential distribution. This is due to the fact that these timings are generated from an exponential distribution when the tree is generated. This is the same for the length of the tree.
+The length of the pedant seems to follow an exponential distribution. This is due to the fact that these timings are generated from an exponential distribution when the tree is generated. 
+
+\bigskip
+The total length of a tree shows an exponential distribution, with a mode of value at around 2.5.  
 
 %--------------------------------------------------------------------%
 %--------------------------------------------------------------------%
