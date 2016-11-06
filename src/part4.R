@@ -56,7 +56,6 @@ yaJC = function(tree, alpha = 0.5, ncol = 5, ntypes = 4) {
     for (child in childs) {
       # Get the length of this edge
       t = phylo$edge.length[phylo$edge[,2]==child]
-      print(t)
       ## Compute child mutated sequence
       childSeq = mutateSequence(parentSequence, alpha, t)
       ## Act on matrix
@@ -88,5 +87,10 @@ plot(bird.orders)
 nodelabels(frame="none")
 m= yaJC(bird.orders, alpha=0.001, ncol=10000)
 ham = hammingDistance(m)  
-ham
+
+# 
+ham[!upper.tri(ham)] = 0
+ind_max = apply(ham, 2, which.max)
+ind_max = apply(ham, 2, which.max)
+sort(ind_max)
   

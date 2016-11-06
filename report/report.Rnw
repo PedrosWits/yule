@@ -8,14 +8,14 @@
 \renewcommand{\topfraction}{0.9}
 \pagestyle{fancy}
 \fancyhf{}
-\rhead{Alex Kell \and Pedro Pinto da Silva}
-\lhead{Programming for Big Data Project}
+\rhead{Alex Kell \and Pedro Silva}
+\lhead{Programming for Big Data: R Project}
 \rfoot{Page \thepage}
 
 \begin{document}
 
 \title{Modelling Evolutionary Trees \\ CSC8622}
-\author{Alex Kell \and Pedro Pinto da Silva}
+\author{Alex Kell \and Pedro Silva}
 
 \maketitle
 
@@ -150,7 +150,7 @@ library(ape)
 @
 
 
-<<size="small">>=
+<<size="small", out.width='5.5in', fig.align="center">>=
 n = 10
 lambda=0.5
 nPlots = 4
@@ -340,7 +340,158 @@ penEdge = lengthOfPendants(tree)
 sample(penEdge, 1)
 @
 
+%--------------------------------------------------------------------%
+%--------------------------------------------------------------------%
+%--------------------------------------------------------------------%
+%--------------------------------------------------------------------%
+%--------------------------------------------------------------------%
+%--------------------------------------------------------------------%
 
+\section*{Part 4}
+
+\subsection*{Question (i)}
+Below we present our functions for simulating an alignment under the Jukes Cantor model.
+The first function computes the transition of nucleotides from one parent to a child. It
+receives as input the parent's DNA sequence along with $\alpha$ and the child's length, returning a new or equal dna sequence for the child.
+
+\bigskip
+The alignment matrix is built using the function named $yaJC$. Inside this, we implemented a $lambda-type$ function that traverses the $phylo$ tree and computes all species dna sequences recursevely.
+
+<<size="small">>=
+# Function to compute the transition of nucleotides from parents to childs
+mutateSequence = function(sequence, alpha, ts){  
+  p = (1/4) * (1 - exp(-4 * alpha * ts))
+  p1 = (1/4) * (1 + 3 * exp(-4 * alpha * ts))
+  newSeq = rep(NA, length(sequence))
+  
+  for(ip in 1:length(sequence)){
+    if(sequence[ip] == 1){
+      newSeq[ip] = sample(1:4, size=1, prob = c(p1,p,p,p))
+    } else if(sequence[ip] == 2){
+      newSeq[ip] = sample(1:4, size=1, prob = c(p,p1,p,p))
+    } else if(sequence[ip] == 3){
+      newSeq[ip] = sample(1:4, size=1, prob = c(p,p,p1,p))
+    } else{
+      newSeq[ip] = sample(1:4, size=1, prob = c(p,p,p,p1))
+    }
+  }
+  return(newSeq)  
+}
+
+# Yet Another Jukes Cantor Model - returns Alignment Matrix
+yaJC = function(tree, alpha = 0.5, ncol = 5, ntypes = 4) {
+  n = length(tree$tip.label)
+  root = n + 1
+  rootSequence = sample(ntypes, ncol, replace=TRUE)
+  
+  # Allocate the alignment matrix and define root dna sequence
+  alignment = matrix(data=NA, 
+                     nrow = length(tree$edge.length) + 1,
+                     ncol = ncol + 2)
+  alignment[1, -c(1,2)] = rootSequence
+  alignment[,1] = c(root, tree$edge[,2])
+  
+  # Function to recurse on the tree
+  treeFall = function(phylo, parent, parentSequence, alpha) {
+    # Find the childs of parent
+    childs = phylo$edge[phylo$edge[,1]==parent , 2]
+    # If no child, return
+    if(length(childs) == 0) {
+      return()
+    }
+    
+    for (child in childs) {
+      # Get the length of this edge
+      t = phylo$edge.length[phylo$edge[,2]==child]
+      ## Compute child mutated sequence
+      childSeq = mutateSequence(parentSequence, alpha, t)
+      ## Act on matrix
+      alignment[alignment[,1] == child, -c(1,2)] <<- childSeq
+      ## Spawn new treeFall
+      treeFall(phylo, child, childSeq, alpha)
+    }
+  }
+  treeFall(tree, root, rootSequence, alpha)
+  alignment = alignment[as.numeric(alignment[,1]) <= n,]
+  # Get labels for second column
+  labels = tree$tip.label[tree$edge[,2]]
+  alignment[,2] = labels[!is.na(labels)]
+  return(alignment)
+}
+
+(jc = yaJC(rtree(5)))
+@
+
+\subsection*{Question (ii)}
+
+The Hamming Distance between two gene sequences consists simply in the number of nucleotides which are different. Our function receives as input an alignment matrix with $n$ rows and outputs a $n$ by $n$ matrix with the hamming distances between all species' dna sequences in the tree.
+
+<<size="small">>=
+# Function to compute hamming distance
+hammingDistance = function(alignmentMatrix){
+  hamDistMat = matrix(data=NA, ncol=nrow(alignmentMatrix), nrow=nrow(alignmentMatrix))
+  dimnames(hamDistMat) = list(alignmentMatrix[,2],alignmentMatrix[,2])
+  for(i in 1:nrow(alignmentMatrix)){
+    for(j in 1:nrow(alignmentMatrix)){
+      s = sum(alignmentMatrix[i,-c(1,2)] != alignmentMatrix[j,-c(1,2)])
+      hamDistMat[i,j] = s
+    }
+  }
+  diag(hamDistMat) = NA
+  return(hamDistMat)
+}
+
+hammingDistance(jc)
+@
+
+
+\subsection*{Question (iii)}
+
+In this question we apply the previously defined functions to the bird.orders dataset.
+$\alpha$ was set to 0.001 and the number of columns to 10000. After computing the aligment matrix and
+respective hamming distance matrix, we find the 3 values that maximize and the 3 values that minimize the hamming distance. 
+
+<<size = "small">>=
+data("bird.orders")
+birdAlignment = yaJC(bird.orders, alpha=0.001, ncol=10000)
+birdHam = hammingDistance(birdAlignment)
+
+# Upper and lower triangular parts of hamming distance matrix are equal
+# Find the indices of maximum and minimum elements per column
+birdHam[!upper.tri(birdHam)] = NA
+maxs = order(birdHam, decreasing = TRUE, na.last = NA)[1:3]
+mins = order(birdHam, decreasing = FALSE, na.last = NA)[1:3]
+                                                      
+top3 = lapply(maxs, function(i) which(birdHam == birdHam[i], arr.ind = TRUE))
+bot3 = lapply(mins, function(i) which(birdHam == birdHam[i], arr.ind = TRUE))
+
+names(top3) = sapply(top3, function(i) colnames(birdHam)[i[1,2]])
+names(bot3) = sapply(bot3, function(i) colnames(birdHam)[i[1,2]])
+
+# 3 Pairs for which Hamming Distance is maximized
+top3
+# 3 Pairs for which Hamming Distance is minimized
+bot3
+@
+
+The pairs of species that minimize the Hamming distance are:
+\begin{itemize}
+\item ${Upupiformes, Bucerotiformes}$
+\item ${Ciconiiformes, Gruiformes}$
+\item ${Strigiformes, Musophagiformes}$
+\end{itemize}
+
+While the pairs of species that maximize the Hamming distance are:
+\begin{itemize}
+\item ${Galbuliformes, Craciformes}$
+\item ${Apodiformes, Craciformes}$
+\item ${Coraciiformes \ or \ Gruiformes , Craciformes}$
+\end{itemize}
+
+As expected, the pairs of species with lowest Hamming distance are the ones that speciated from the same
+parent species and hence diverged from the same gene pool. On the contrary, the pairs of species with largest
+Hamming distance are further away from the tree and its closest common ancestor is several speciation events
+apart. Curiously, the species $Craciformes$ is present in all pairs that maximize the Hamming distance. In fact, the most recent common ancestor for these pairs is the root of the tree itself. This suggests that either the species $Craciformes$, the opposite branch of the tree or both underwent a set of gene mutations that provoked a considerable shift in the alignment of their gene sequences.
 
 %--------------------------------------------------------------------%
 %--------------------------------------------------------------------%
